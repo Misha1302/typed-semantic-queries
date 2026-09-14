@@ -19,5 +19,6 @@ jobs:
       - run: dotnet restore SemanticQueryMvp.sln
       - run: dotnet build SemanticQueryMvp.sln -c Release --no-restore
       - run: dotnet test SemanticQueryMvp.sln -c Release --no-build
+      - run: ./scripts/test-module-exchange.sh
       - run: dotnet run --project demo/SemanticQueryDemo -c Release --no-build
       - run: dotnet run --project benchmarks/SemanticQueries.Microbenchmarks -c Release --no-build
