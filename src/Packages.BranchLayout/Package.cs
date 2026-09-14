@@ -1,1 +1,21 @@
-using MiniCompiler.IR; using SemanticContracts; using SemanticQueries.Core; namespace Packages.BranchLayout; public sealed class BranchLayoutPass{private static readonly BranchProbabilityQuery Q=new();public IReadOnlyList<string> Order(Branch b,SemanticSession s){var p=s.Query(Q,b.Id);if(p.Status!=QueryStatus.Known)return [b.TrueBlock,b.FalseBlock];return p.Value!>=0.5?[b.TrueBlock,b.FalseBlock]:[b.FalseBlock,b.TrueBlock];}}
+using MiniCompiler.IR;
+using SemanticContracts;
+using SemanticQueries.Core;
+
+namespace Packages.BranchLayout;
+
+public sealed class BranchLayoutPass
+{
+    private static readonly BranchProbabilityQuery Query = new();
+
+    public IReadOnlyList<string> Order(Branch branch, SemanticSession session)
+    {
+        var probability = session.Query(Query, branch.Id);
+        if (probability.Status != QueryStatus.Known)
+            return [branch.TrueBlock, branch.FalseBlock];
+
+        return probability.Value >= 0.5
+            ? [branch.TrueBlock, branch.FalseBlock]
+            : [branch.FalseBlock, branch.TrueBlock];
+    }
+}

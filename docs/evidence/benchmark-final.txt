@@ -1,0 +1,13 @@
+Toy benchmark — not a production compiler benchmark.
+case | median ns/op | median B/op
+--- | ---: | ---:
+direct typed call | 110.2 | 0.0
+ordinary typed registry | 158.5 | 0.0
+semantic query warm | 70.4 | 32.0
+semantic query cold (BasicRange) | 567.0 | 800.0
+semantic query cold (1 constant provider) | 310.7 | 800.0
+semantic query cold (2 constant providers) | 360.9 | 800.0
+semantic query cold (10 constant providers) | 853.2 | 1040.0
+semantic query cold (100 constant providers) | 3901.1 | 2904.0
+deep A->B->C->D cold | 3697.3 | 1776.0
+deep A->B->C->D warm | 35.5 | 0.0
