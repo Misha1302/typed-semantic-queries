@@ -1,1 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType></PropertyGroup><ItemGroup><ProjectReference Include="../../src/SemanticQueries.Core/SemanticQueries.Core.csproj"/><ProjectReference Include="../../src/MiniCompiler.IR/MiniCompiler.IR.csproj"/><ProjectReference Include="../../src/SemanticContracts/SemanticContracts.csproj"/><ProjectReference Include="../../src/Packages.BasicRange/Packages.BasicRange.csproj"/><ProjectReference Include="../../src/Baseline.DirectServices/Baseline.DirectServices.csproj"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/SemanticQueries.Core/SemanticQueries.Core.csproj" />
+    <ProjectReference Include="../../src/MiniCompiler.IR/MiniCompiler.IR.csproj" />
+    <ProjectReference Include="../../src/SemanticContracts/SemanticContracts.csproj" />
+    <ProjectReference Include="../../src/Packages.BasicRange/Packages.BasicRange.csproj" />
+    <ProjectReference Include="../../src/Baseline.DirectServices/Baseline.DirectServices.csproj" />
+    <ProjectReference Include="../../src/Baseline.BasicRange/Baseline.BasicRange.csproj" />
+  </ItemGroup>
+</Project>

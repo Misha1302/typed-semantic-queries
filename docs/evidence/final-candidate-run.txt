@@ -1,0 +1,120 @@
+=== RESTORE ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+=== BUILD ===
+  SemanticQueries.Core -> /home/micodiy/typed-semantic-queries/src/SemanticQueries.Core/bin/Release/net10.0/SemanticQueries.Core.dll
+  MiniCompiler.IR -> /home/micodiy/typed-semantic-queries/src/MiniCompiler.IR/bin/Release/net10.0/MiniCompiler.IR.dll
+  SemanticContracts -> /home/micodiy/typed-semantic-queries/src/SemanticContracts/bin/Release/net10.0/SemanticContracts.dll
+  Packages.BranchLayout -> /home/micodiy/typed-semantic-queries/src/Packages.BranchLayout/bin/Release/net10.0/Packages.BranchLayout.dll
+  Packages.BoundsBridge -> /home/micodiy/typed-semantic-queries/src/Packages.BoundsBridge/bin/Release/net10.0/Packages.BoundsBridge.dll
+  Packages.LoopRange -> /home/micodiy/typed-semantic-queries/src/Packages.LoopRange/bin/Release/net10.0/Packages.LoopRange.dll
+  Packages.BranchProfile -> /home/micodiy/typed-semantic-queries/src/Packages.BranchProfile/bin/Release/net10.0/Packages.BranchProfile.dll
+  Packages.BasicRange -> /home/micodiy/typed-semantic-queries/src/Packages.BasicRange/bin/Release/net10.0/Packages.BasicRange.dll
+  Baseline.DirectServices -> /home/micodiy/typed-semantic-queries/src/Baseline.DirectServices/bin/Release/net10.0/Baseline.DirectServices.dll
+  Packages.Effects -> /home/micodiy/typed-semantic-queries/src/Packages.Effects/bin/Release/net10.0/Packages.Effects.dll
+  Packages.Alignment -> /home/micodiy/typed-semantic-queries/src/Packages.Alignment/bin/Release/net10.0/Packages.Alignment.dll
+  Packages.NoAlias -> /home/micodiy/typed-semantic-queries/src/Packages.NoAlias/bin/Release/net10.0/Packages.NoAlias.dll
+  Packages.LicmBridge -> /home/micodiy/typed-semantic-queries/src/Packages.LicmBridge/bin/Release/net10.0/Packages.LicmBridge.dll
+  Packages.BranchSimplifier -> /home/micodiy/typed-semantic-queries/src/Packages.BranchSimplifier/bin/Release/net10.0/Packages.BranchSimplifier.dll
+  Packages.TinyLicm -> /home/micodiy/typed-semantic-queries/src/Packages.TinyLicm/bin/Release/net10.0/Packages.TinyLicm.dll
+  Packages.BoundsOptimizer -> /home/micodiy/typed-semantic-queries/src/Packages.BoundsOptimizer/bin/Release/net10.0/Packages.BoundsOptimizer.dll
+  Packages.ArraySemantics -> /home/micodiy/typed-semantic-queries/src/Packages.ArraySemantics/bin/Release/net10.0/Packages.ArraySemantics.dll
+  Baseline.BoundsBridge -> /home/micodiy/typed-semantic-queries/src/Baseline.BoundsBridge/bin/Release/net10.0/Baseline.BoundsBridge.dll
+  Baseline.BasicRange -> /home/micodiy/typed-semantic-queries/src/Baseline.BasicRange/bin/Release/net10.0/Baseline.BasicRange.dll
+  Baseline.LoopRange -> /home/micodiy/typed-semantic-queries/src/Baseline.LoopRange/bin/Release/net10.0/Baseline.LoopRange.dll
+  Baseline.ArraySemantics -> /home/micodiy/typed-semantic-queries/src/Baseline.ArraySemantics/bin/Release/net10.0/Baseline.ArraySemantics.dll
+  Baseline.Alignment -> /home/micodiy/typed-semantic-queries/src/Baseline.Alignment/bin/Release/net10.0/Baseline.Alignment.dll
+  SemanticQueries.Microbenchmarks -> /home/micodiy/typed-semantic-queries/benchmarks/SemanticQueries.Microbenchmarks/bin/Release/net10.0/SemanticQueries.Microbenchmarks.dll
+  SemanticQueryDemo -> /home/micodiy/typed-semantic-queries/demo/SemanticQueryDemo/bin/Release/net10.0/SemanticQueryDemo.dll
+  SemanticQueries.Tests -> /home/micodiy/typed-semantic-queries/tests/SemanticQueries.Tests/bin/Release/net10.0/SemanticQueries.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.62
+=== TEST ===
+Test run for /home/micodiy/typed-semantic-queries/tests/SemanticQueries.Tests/bin/Release/net10.0/SemanticQueries.Tests.dll (.NETCoreApp,Version=v10.0)
+VSTest version 18.0.2 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    41, Skipped:     0, Total:    41, Duration: 165 ms - SemanticQueries.Tests.dll (net10.0)
+=== DEMO ===
+=== Without LoopRangeProvider ===
+for i = 0 .. 9
+    bounds_check a[i]
+    load a[i]
+Optimization: bounds check kept
+
+=== With LoopRangeProvider ===
+for i = 0 .. 9
+    load a[i]
+Optimization: bounds check removed
+
+=== Branch probability ===
+Before: cold -> hot
+After:  hot -> cold
+
+=== Conflicting Length providers ===
+Length A = 10
+Length B = 11
+Result: Conflict
+Bounds check: kept
+
+=== Tiny LICM ===
+load p: hoisted
+=== BENCHMARK ===
+Toy benchmark — not a production compiler benchmark.
+case | median ns/op | median B/op
+--- | ---: | ---:
+direct typed call | 110.2 | 0.0
+ordinary typed registry | 158.5 | 0.0
+semantic query warm | 70.4 | 32.0
+semantic query cold (BasicRange) | 567.0 | 800.0
+semantic query cold (1 constant provider) | 310.7 | 800.0
+semantic query cold (2 constant providers) | 360.9 | 800.0
+semantic query cold (10 constant providers) | 853.2 | 1040.0
+semantic query cold (100 constant providers) | 3901.1 | 2904.0
+deep A->B->C->D cold | 3697.3 | 1776.0
+deep A->B->C->D warm | 35.5 | 0.0
+=== STATUS ===
+ M .github/workflows/ci.yml
+ M README.md
+ M SemanticQueryMvp.sln
+ M benchmarks/SemanticQueries.Microbenchmarks/Program.cs
+ M benchmarks/SemanticQueries.Microbenchmarks/SemanticQueries.Microbenchmarks.csproj
+ M demo/SemanticQueryDemo/Program.cs
+ M demo/SemanticQueryDemo/SemanticQueryDemo.csproj
+ M docs/ARCHITECTURE.md
+ M docs/BASELINE_COMPARISON.md
+ M docs/EXPERIMENTS.md
+ M docs/VERDICT.md
+ M src/Baseline.DirectServices/Baseline.cs
+ M src/MiniCompiler.IR/IR.cs
+ M src/Packages.ArraySemantics/Package.cs
+ M src/Packages.BasicRange/Package.cs
+ M src/Packages.BoundsBridge/Package.cs
+ M src/Packages.BoundsOptimizer/Package.cs
+ M src/Packages.BranchLayout/Package.cs
+ M src/Packages.BranchProfile/Package.cs
+ M src/Packages.BranchSimplifier/Package.cs
+ M src/Packages.LoopRange/Package.cs
+ M src/SemanticContracts/Contracts.cs
+ M src/SemanticQueries.Core/Core.cs
+ M tests/SemanticQueries.Tests/SemanticQueries.Tests.csproj
+ M tests/SemanticQueries.Tests/Tests.cs
+?? docs/BENCHMARK_RESULTS.md
+?? docs/UT_INTEGRATION.md
+?? docs/evidence/
+?? src/Baseline.Alignment/
+?? src/Baseline.ArraySemantics/
+?? src/Baseline.BasicRange/
+?? src/Baseline.BoundsBridge/
+?? src/Baseline.LoopRange/
+?? src/Packages.Alignment/
+?? src/Packages.Effects/
+?? src/Packages.LicmBridge/
+?? src/Packages.NoAlias/
+?? src/Packages.TinyLicm/

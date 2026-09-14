@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Baseline.DirectServices/Baseline.DirectServices.csproj" />
+    <ProjectReference Include="../SemanticContracts/SemanticContracts.csproj" />
+  </ItemGroup>
+</Project>

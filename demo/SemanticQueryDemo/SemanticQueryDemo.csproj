@@ -1,3 +1,21 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType></PropertyGroup><ItemGroup>
-<ProjectReference Include="../../src/SemanticQueries.Core/SemanticQueries.Core.csproj"/><ProjectReference Include="../../src/MiniCompiler.IR/MiniCompiler.IR.csproj"/><ProjectReference Include="../../src/SemanticContracts/SemanticContracts.csproj"/><ProjectReference Include="../../src/Packages.BasicRange/Packages.BasicRange.csproj"/><ProjectReference Include="../../src/Packages.ArraySemantics/Packages.ArraySemantics.csproj"/><ProjectReference Include="../../src/Packages.BoundsBridge/Packages.BoundsBridge.csproj"/><ProjectReference Include="../../src/Packages.BoundsOptimizer/Packages.BoundsOptimizer.csproj"/><ProjectReference Include="../../src/Packages.LoopRange/Packages.LoopRange.csproj"/><ProjectReference Include="../../src/Packages.BranchProfile/Packages.BranchProfile.csproj"/><ProjectReference Include="../../src/Packages.BranchLayout/Packages.BranchLayout.csproj"/>
-</ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/SemanticQueries.Core/SemanticQueries.Core.csproj" />
+    <ProjectReference Include="../../src/MiniCompiler.IR/MiniCompiler.IR.csproj" />
+    <ProjectReference Include="../../src/SemanticContracts/SemanticContracts.csproj" />
+    <ProjectReference Include="../../src/Packages.BasicRange/Packages.BasicRange.csproj" />
+    <ProjectReference Include="../../src/Packages.ArraySemantics/Packages.ArraySemantics.csproj" />
+    <ProjectReference Include="../../src/Packages.BoundsBridge/Packages.BoundsBridge.csproj" />
+    <ProjectReference Include="../../src/Packages.BoundsOptimizer/Packages.BoundsOptimizer.csproj" />
+    <ProjectReference Include="../../src/Packages.LoopRange/Packages.LoopRange.csproj" />
+    <ProjectReference Include="../../src/Packages.BranchProfile/Packages.BranchProfile.csproj" />
+    <ProjectReference Include="../../src/Packages.BranchLayout/Packages.BranchLayout.csproj" />
+    <ProjectReference Include="../../src/Packages.Effects/Packages.Effects.csproj" />
+    <ProjectReference Include="../../src/Packages.NoAlias/Packages.NoAlias.csproj" />
+    <ProjectReference Include="../../src/Packages.LicmBridge/Packages.LicmBridge.csproj" />
+    <ProjectReference Include="../../src/Packages.TinyLicm/Packages.TinyLicm.csproj" />
+  </ItemGroup>
+</Project>

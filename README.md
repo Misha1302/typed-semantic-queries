@@ -2,69 +2,92 @@
 
 [![CI](https://github.com/Misha1302/typed-semantic-queries/actions/workflows/ci.yml/badge.svg)](https://github.com/Misha1302/typed-semantic-queries/actions/workflows/ci.yml)
 
-A runnable .NET 10 experiment that asks one narrow compiler-architecture question:
+A runnable .NET 10 experiment for one compiler-architecture question:
 
 > Can independently authored compiler components exchange small typed semantic results so that a new provider improves existing optimizations without pairwise integration?
 
-The answer is **yes, but the generic runtime is less important than the contracts and lifecycle discipline**. The final verdict is [`GO_WITH_SIMPLIFICATIONS`](docs/VERDICT.md).
+**Result: yes — but a generic semantic runtime is not required for the main extensibility win.** The measured conclusion is [`GO_WITH_SIMPLIFICATIONS`](docs/VERDICT.md).
 
-## The experiment
+## Main experiment
 
 ```text
-BasicRange ─┐
-LoopRange ──┼─> Range(i, P) ─┐
-            │                 ├─> BoundsBridge ─> InBounds(a,i,P) ─> BoundsCheckOptimizer
-ArrayLength ─> Length(a, P) ─┘
+BasicRange ----+
+LoopRange -----+--> Range(i, P) --+
+                                  +--> BoundsBridge --> InBounds(a,i,P) --> BoundsCheckOptimizer
+ArrayLength ------> Length(a, P) -+
 
-same Range(i, P) ────────────────────────────────────────────────> BranchSimplifier
+same Range(i, P) -----------------------------------------------> BranchSimplifier
 ```
 
-`LoopRangeProvider` is added later. `BoundsCheckOptimizer`, `BoundsBridge`, and the original providers are not changed, yet an existing bounds check becomes removable. The same provider also strengthens a second consumer.
+`LoopRangeProvider` is installed later. The existing optimizer, bridge and old producers do not change, yet the same loop goes from **keep bounds check** to **remove bounds check**. The same provider also strengthens `BranchSimplifier`.
 
-## Why this repository exists
+A deliberately strong conventional typed-services baseline passes the same independent-extension test. That counter-result is central to the verdict.
 
-This is not a framework proposal and not a Universal Toolchain integration. It is an executable falsification-oriented MVP: a strong conventional typed-services baseline sits next to the semantic-query version, and both are tested on the same extension scenario.
+## What is implemented
 
-## Run
+- typed query contracts with query-owned combination and validation;
+- query-type-safe provider dispatch (different contracts may share key/value CLR types safely);
+- startup-built `StaticPlan`; no reflection/plugin discovery on the query hot path;
+- revision-scoped, memoized, single-threaded `SemanticSession`;
+- deterministic conflict, stale-session and query-cycle failures;
+- `Range`, `Length`, `InBounds`, `BranchProbability` and `Alignment` queries;
+- separate `LoopAnalysisEngine` exported through `LoopRangeProvider`;
+- proof/heuristic separation: branch probability can change layout but not legality;
+- one additional slice: `Effects + NoAlias -> CanHoist -> TinyLicmPass`;
+- package-separated conventional baseline;
+- **41 xUnit tests**, including all 24 provider-registration permutations;
+- runnable demo and an allocation-aware toy benchmark;
+- a read-only integration spike against the actual Universal Toolchain repository.
 
-Requires .NET 10 SDK.
+## Run everything
+
+Requires the .NET 10 SDK.
 
 ```bash
 ./scripts/run-all.sh
 ```
 
-Or individually:
+Or run the parts separately:
 
 ```bash
-dotnet build SemanticQueryMvp.sln -c Release
-dotnet test SemanticQueryMvp.sln -c Release
-dotnet run --project demo/SemanticQueryDemo -c Release
-dotnet run --project benchmarks/SemanticQueries.Microbenchmarks -c Release
+dotnet restore SemanticQueryMvp.sln
+dotnet build SemanticQueryMvp.sln -c Release --no-restore
+dotnet test SemanticQueryMvp.sln -c Release --no-build
+dotnet run --project demo/SemanticQueryDemo -c Release --no-build
+dotnet run --project benchmarks/SemanticQueries.Microbenchmarks -c Release --no-build
 ```
 
-## What is implemented
+## Demo
 
-- typed `QuerySpec<TKey,TValue>`-style contracts;
-- explicit startup composition (`StaticPlan`), no reflection on query hot paths;
-- revision-scoped `SemanticSession` with memoization;
-- cycle detection and deterministic stale-session failure;
-- query-owned multiple-provider semantics (`Range` intersection, `Length` conflict);
-- independent `Range + Length -> InBounds` bridge;
-- loop/induction-variable provider that strengthens old consumers;
-- branch probability as heuristic knowledge, separated from correctness proofs;
-- a strong conventional typed-services baseline;
-- runnable demo, tests, toy microbenchmark, and CI.
+The executable demonstration covers the required metamorphic case, heuristic layout, conflict handling and the extra LICM slice:
 
-## Read next
+```text
+=== Without LoopRangeProvider ===
+Optimization: bounds check kept
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the small runtime and boundaries
-- [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) — acceptance/adversarial experiments
-- [`docs/BASELINE_COMPARISON.md`](docs/BASELINE_COMPARISON.md) — what ordinary typed services already solve
-- [`docs/VERDICT.md`](docs/VERDICT.md) — why the conclusion is `GO_WITH_SIMPLIFICATIONS`
+=== With LoopRangeProvider ===
+Optimization: bounds check removed
+
+=== Conflicting Length providers ===
+Result: Conflict
+Bounds check: kept
+
+=== Tiny LICM ===
+load p: hoisted
+```
+
+## Evidence and design notes
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — runtime boundary, lifecycle and guarantees
+- [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) — executed acceptance/adversarial matrix
+- [`docs/BASELINE_COMPARISON.md`](docs/BASELINE_COMPARISON.md) — honest comparison with ordinary typed services
+- [`docs/BENCHMARK_RESULTS.md`](docs/BENCHMARK_RESULTS.md) — measured toy numbers and limitations
+- [`docs/UT_INTEGRATION.md`](docs/UT_INTEGRATION.md) — mapping to actual Universal Toolchain owners
+- [`docs/VERDICT.md`](docs/VERDICT.md) — final architectural decision
 
 ## Non-goals
 
-No semantic database, reactive graph, Datalog/SMT runtime, generic fixed-point engine, reflection-based plugin discovery, or automatic cross-revision dependency graph. Those abstractions are intentionally excluded until a concrete experiment proves they are needed.
+The project intentionally does **not** contain a semantic database, reactive dependency graph, Datalog/SMT runtime, generic fixed-point engine, universal evidence model, source-generated dispatcher, or automatic cross-revision transfer. Those abstractions need their own evidence before entering the design.
 
 ## License
 
