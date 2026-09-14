@@ -1,0 +1,19 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore SemanticQueryMvp.sln
+      - run: dotnet build SemanticQueryMvp.sln -c Release --no-restore
+      - run: dotnet test SemanticQueryMvp.sln -c Release --no-build
+      - run: dotnet run --project demo/SemanticQueryDemo -c Release --no-build

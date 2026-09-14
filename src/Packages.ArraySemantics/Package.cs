@@ -1,0 +1,1 @@
+using MiniCompiler.IR; using SemanticContracts; using SemanticQueries.Core; namespace Packages.ArraySemantics; public sealed class ArrayLengthProvider(CompilationUnit unit):IQueryProvider<LengthKey,int>{ public QueryResult<int> TryGet(LengthKey key,QueryContext context)=>unit.ArrayLengths.TryGetValue(key.Array,out var n)?QueryResult<int>.Known(n):QueryResult<int>.Unknown; }

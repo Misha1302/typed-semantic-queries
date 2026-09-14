@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><ProjectReference Include="../SemanticQueries.Core/SemanticQueries.Core.csproj"/><ProjectReference Include="../SemanticContracts/SemanticContracts.csproj"/></ItemGroup></Project>

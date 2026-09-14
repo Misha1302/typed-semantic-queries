@@ -1,0 +1,1 @@
+using MiniCompiler.IR; using SemanticContracts; using SemanticQueries.Core; namespace Packages.BranchProfile; public sealed class ProfileBranchProbabilityProvider(CompilationUnit unit):IQueryProvider<BranchId,double>{public QueryResult<double> TryGet(BranchId key,QueryContext c)=>unit.Profile.TryGetValue(key,out var p)?QueryResult<double>.Known(p):QueryResult<double>.Unknown;}
