@@ -14,8 +14,14 @@ public readonly record struct QueryResult<T>(QueryStatus Status, T? Value = defa
     public static QueryResult<T> Known(T value) => new(QueryStatus.Known, value);
 }
 
+public readonly record struct QueryIdentity(Type ContractType, object? Variant = null)
+{
+    public static QueryIdentity For<TQuery>(object? variant = null) => new(typeof(TQuery), variant);
+}
+
 public interface IQuerySpec<TKey, TValue> where TKey : notnull
 {
+    QueryIdentity Identity => new(GetType());
     string Name { get; }
     QueryResult<TValue> Combine(IReadOnlyList<TValue> values);
     void Validate(TValue value) { }
@@ -25,6 +31,13 @@ public interface IQueryProviderRegistration
 {
     Type QueryType { get; }
 }
+
+public interface ISemanticRevisionSource
+{
+    long SemanticRevision { get; }
+}
+
+public interface IStableQueryProvider { }
 
 public interface IQueryProvider<TKey, TValue> where TKey : notnull
 {
@@ -42,6 +55,10 @@ public interface IQueryProvider<TQuery, TKey, TValue>
 public sealed class StaticPlan
 {
     private readonly Dictionary<Type, List<object>> _providers = new();
+    private readonly List<ISemanticRevisionSource> _revisionSources = [];
+    private bool _hasUntrackedProviders;
+
+    public long Revision { get; private set; } = 1;
 
     public StaticPlan Add(IQueryProviderRegistration provider)
     {
@@ -52,11 +69,25 @@ public sealed class StaticPlan
         }
 
         providers.Add(provider);
+        if (provider is ISemanticRevisionSource revisionSource)
+        {
+            if (!_revisionSources.Any(existing => ReferenceEquals(existing, revisionSource)))
+                _revisionSources.Add(revisionSource);
+        }
+        else if (provider is not IStableQueryProvider)
+        {
+            _hasUntrackedProviders = true;
+        }
+
+        Revision++;
         return this;
     }
 
     internal IReadOnlyList<object> Providers(Type queryType) =>
         _providers.TryGetValue(queryType, out var providers) ? providers : [];
+
+    internal IReadOnlyList<ISemanticRevisionSource> RevisionSources => _revisionSources;
+    internal bool CacheSafe => !_hasUntrackedProviders;
 }
 
 public sealed class QueryCycleException(string message) : InvalidOperationException(message);
@@ -74,11 +105,19 @@ public sealed class SemanticSession
     private readonly StaticPlan _plan;
     private readonly long _revision;
     private readonly Func<long> _currentRevision;
-    private readonly Dictionary<(Type Query, object Key), object> _cache = new();
-    private readonly HashSet<(Type Query, object Key)> _active = [];
+    private readonly Dictionary<(QueryIdentity Query, object Key), object> _cache = new();
+    private readonly HashSet<(QueryIdentity Query, object Key)> _active = [];
+    private readonly (ISemanticRevisionSource Source, long Revision)[] _providerRevisions;
+    private readonly long _planRevision;
+    private readonly bool _cacheSafe;
 
     public SemanticSession(StaticPlan plan, long revision, Func<long> currentRevision)
-        => (_plan, _revision, _currentRevision) = (plan, revision, currentRevision);
+    {
+        (_plan, _revision, _currentRevision) = (plan, revision, currentRevision);
+        _providerRevisions = plan.RevisionSources.Select(source => (source, source.SemanticRevision)).ToArray();
+        _planRevision = plan.Revision;
+        _cacheSafe = plan.CacheSafe;
+    }
 
     public QueryResult<TValue> Query<TKey, TValue>(IQuerySpec<TKey, TValue> spec, TKey key)
         where TKey : notnull
@@ -86,8 +125,11 @@ public sealed class SemanticSession
         EnsureCurrentRevision();
 
         var queryType = spec.GetType();
-        var cacheKey = (queryType, (object)key);
-        if (_cache.TryGetValue(cacheKey, out var cached))
+        if (spec.Identity.ContractType != queryType)
+            throw new QueryContractException($"Query identity {spec.Identity.ContractType} does not match runtime query type {queryType}.");
+
+        var cacheKey = (spec.Identity, (object)key);
+        if (_cacheSafe && _cache.TryGetValue(cacheKey, out var cached))
             return (QueryResult<TValue>)cached;
 
         if (!_active.Add(cacheKey))
@@ -117,7 +159,8 @@ public sealed class SemanticSession
             var combined = sawConflict ? QueryResult<TValue>.Conflict : spec.Combine(values);
             if (combined.Status == QueryStatus.Known)
                 spec.Validate(combined.Value!);
-            _cache[cacheKey] = combined;
+            if (_cacheSafe)
+                _cache[cacheKey] = combined;
             return combined;
         }
         finally
@@ -128,9 +171,20 @@ public sealed class SemanticSession
 
     private void EnsureCurrentRevision()
     {
+        if (_plan.Revision != _planRevision)
+            throw new StaleSemanticSessionException(
+                $"Static plan changed from revision {_planRevision} to {_plan.Revision}.");
+
         var current = _currentRevision();
         if (current != _revision)
             throw new StaleSemanticSessionException(
                 $"Session revision {_revision} is stale; current revision is {current}.");
+
+        foreach (var (source, revision) in _providerRevisions)
+        {
+            if (source.SemanticRevision != revision)
+                throw new StaleSemanticSessionException(
+                    $"Provider-owned semantic state changed from revision {revision} to {source.SemanticRevision}.");
+        }
     }
 }

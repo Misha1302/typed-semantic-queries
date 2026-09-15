@@ -5,7 +5,7 @@ using SemanticQueries.Core;
 namespace Packages.BasicRange;
 
 public sealed class BasicRangeProvider(CompilationUnit unit)
-    : IQueryProvider<RangeQuery, RangeKey, AbstractRange>
+    : IQueryProvider<RangeQuery, RangeKey, AbstractRange>, IStableQueryProvider
 {
     private static readonly RangeQuery Range = new();
     public int Calls { get; private set; }
