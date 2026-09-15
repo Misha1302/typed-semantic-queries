@@ -68,9 +68,10 @@ Console.WriteLine($"Bounds check: {(optimizer.Run(check, conflictSession).Remove
 
 var load = new MemoryLocation("p");
 var write = new MemoryLocation("q");
-var licmUnit = new CompilationUnit().LoopWrites(body, write).NoAlias(load, write, body);
+var licmUnit = new CompilationUnit().NoAlias(load, write, body);
+var effects = new LoopEffectsAnalysis().SetWrites(body, write);
 var licmPlan = new StaticPlan()
-    .Add(new LoopEffectsProvider(licmUnit))
+    .Add(new LoopEffectsProvider(effects))
     .Add(new ExplicitNoAliasProvider(licmUnit))
     .Add(new CanHoistBridgeProvider());
 var licmSession = new SemanticSession(licmPlan, licmUnit.Revision, () => licmUnit.Revision);

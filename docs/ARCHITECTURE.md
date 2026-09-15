@@ -30,9 +30,9 @@ This keeps legality knowledge separate from heuristic knowledge: `P(condition)=0
 
 ## Revision model
 
-Every IR mutation increments `CompilationUnit.Revision`. A session snapshots that number. Every query first checks the current revision; once the IR changes, the old session throws `StaleSemanticSessionException` and callers must create a new one.
+Every IR mutation increments `CompilationUnit.Revision`. `StaticPlan` also carries a composition revision, and providers with mutable analysis-owned state expose `ISemanticRevisionSource`. A session snapshots all of those revisions. Every query checks them before dispatch; changing IR, provider composition, or tracked provider state makes the old session throw `StaleSemanticSessionException`.
 
-That model is intentionally coarse. There is no cross-revision cache reuse and no automatic transfer through rewrites.
+Legacy providers without an explicit stability or revision contract remain source-compatible but make the plan cache-unsafe, so the session does not memoize their results. Providers that are immutable for a session can opt into memoization with `IStableQueryProvider`. The model is intentionally coarse: there is no cross-revision cache reuse and no automatic transfer through rewrites.
 
 ## Engines stay engines
 
@@ -53,5 +53,7 @@ Effects(loop) + NoAlias(load, write, loop)
                  v
               TinyLicmPass
 ```
+
+`LoopEffectsAnalysis` owns the derived loop-write side table and its revision; `MiniCompiler.IR` does not store that analysis result. `LoopEffectsProvider` exposes the state through `EffectsQuery` and lets `SemanticSession` detect stale analysis state through `ISemanticRevisionSource`.
 
 `CanHoistBridgeProvider` fails closed if effects are unknown, a write targets the loaded location, or any required no-alias proof is missing.
