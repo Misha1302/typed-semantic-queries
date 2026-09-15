@@ -40,7 +40,6 @@ public sealed class BasicRangeProvider(CompilationUnit unit)
         var candidates = new[]
         {
             left.Lower * right.Lower,
-            left.Lower * right.Lower,
             left.Lower * right.Upper,
             left.Upper * right.Lower,
             left.Upper * right.Upper
