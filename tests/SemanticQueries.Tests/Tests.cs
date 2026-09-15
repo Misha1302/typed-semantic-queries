@@ -373,8 +373,9 @@ public class Tests
     {
         var load = new MemoryLocation("p");
         var write = new MemoryLocation("q");
-        var unit = new CompilationUnit().LoopWrites(P, write).NoAlias(load, write, P);
-        var plan = LicmPlan(unit);
+        var unit = new CompilationUnit().NoAlias(load, write, P);
+        var effects = new LoopEffectsAnalysis().SetWrites(P, write);
+        var plan = LicmPlan(unit, effects);
         Assert.True(new TinyLicmPass().Run(new LoadOperation(load, P), Session(unit, plan)).Hoisted);
     }
 
@@ -383,16 +384,46 @@ public class Tests
     {
         var load = new MemoryLocation("p");
         var write = new MemoryLocation("q");
-        var unit = new CompilationUnit().LoopWrites(P, write);
-        Assert.False(new TinyLicmPass().Run(new LoadOperation(load, P), Session(unit, LicmPlan(unit))).Hoisted);
+        var unit = new CompilationUnit();
+        var effects = new LoopEffectsAnalysis().SetWrites(P, write);
+        Assert.False(new TinyLicmPass().Run(new LoadOperation(load, P), Session(unit, LicmPlan(unit, effects))).Hoisted);
     }
 
     [Fact]
     public void TinyLicm_KeepsWhenLoopWritesSameLocation()
     {
         var load = new MemoryLocation("p");
-        var unit = new CompilationUnit().LoopWrites(P, load);
-        Assert.False(new TinyLicmPass().Run(new LoadOperation(load, P), Session(unit, LicmPlan(unit))).Hoisted);
+        var unit = new CompilationUnit();
+        var effects = new LoopEffectsAnalysis().SetWrites(P, load);
+        Assert.False(new TinyLicmPass().Run(new LoadOperation(load, P), Session(unit, LicmPlan(unit, effects))).Hoisted);
+    }
+
+    [Fact]
+    public void LoopEffectsMutation_InvalidatesExistingSession()
+    {
+        var load = new MemoryLocation("p");
+        var other = new MemoryLocation("q");
+        var unit = new CompilationUnit().NoAlias(load, other, P);
+        var effects = new LoopEffectsAnalysis().SetWrites(P, other);
+        var plan = LicmPlan(unit, effects);
+        var session = Session(unit, plan);
+
+        Assert.True(new TinyLicmPass().Run(new LoadOperation(load, P), session).Hoisted);
+        effects.SetWrites(P, load);
+        Assert.Throws<StaleSemanticSessionException>(() =>
+            new TinyLicmPass().Run(new LoadOperation(load, P), session));
+        Assert.False(new TinyLicmPass().Run(new LoadOperation(load, P), Session(unit, plan)).Hoisted);
+    }
+
+    [Fact]
+    public void CompilationUnit_DoesNotOwnLoopEffectsState()
+    {
+        var methods = typeof(CompilationUnit)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(method => method.Name)
+            .ToArray();
+        Assert.DoesNotContain("LoopWrites", methods);
+        Assert.DoesNotContain("TryGetLoopWrites", methods);
     }
 
     [Fact]
@@ -491,9 +522,9 @@ public class Tests
         return plan;
     }
 
-    private static StaticPlan LicmPlan(CompilationUnit unit) =>
+    private static StaticPlan LicmPlan(CompilationUnit unit, LoopEffectsAnalysis effects) =>
         new StaticPlan()
-            .Add(new LoopEffectsProvider(unit))
+            .Add(new LoopEffectsProvider(effects))
             .Add(new ExplicitNoAliasProvider(unit))
             .Add(new CanHoistBridgeProvider());
 
