@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace MiniCompiler.IR;
 
 public readonly record struct ValueId(string Name) { public override string ToString() => Name; }
@@ -21,6 +23,7 @@ public sealed class CompilationUnit
     private readonly Dictionary<ArrayId, int> _arrayLengths = [];
     private readonly List<LoopInfo> _loops = [];
     private readonly Dictionary<BranchId, double> _profile = [];
+    private readonly Dictionary<ProgramPoint, ReadOnlyCollection<MemoryLocation>> _loopWrites = [];
     private readonly HashSet<(MemoryLocation Left, MemoryLocation Right, ProgramPoint Point)> _noAlias = [];
     private readonly Dictionary<(ValueId Value, ProgramPoint Point), int> _alignments = [];
 
@@ -57,6 +60,13 @@ public sealed class CompilationUnit
     public CompilationUnit ProfileBranch(BranchId branch, double probability)
     {
         _profile[branch] = probability;
+        Revision++;
+        return this;
+    }
+
+    public CompilationUnit LoopWrites(ProgramPoint loopPoint, params MemoryLocation[] writes)
+    {
+        _loopWrites[loopPoint] = System.Array.AsReadOnly(writes.ToArray());
         Revision++;
         return this;
     }
@@ -99,6 +109,18 @@ public sealed class CompilationUnit
 
         loop = found;
         return true;
+    }
+
+    public bool TryGetLoopWrites(ProgramPoint point, out IReadOnlyList<MemoryLocation> writes)
+    {
+        if (_loopWrites.TryGetValue(point, out var stored))
+        {
+            writes = stored;
+            return true;
+        }
+
+        writes = [];
+        return false;
     }
 
     public bool IsKnownNoAlias(MemoryLocation left, MemoryLocation right, ProgramPoint point) =>
