@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/SemanticQueries.Core/SemanticQueries.Core.csproj" />
+    <ProjectReference Include="../../src/MiniCompiler.IR/MiniCompiler.IR.csproj" />
+    <ProjectReference Include="../../src/SemanticContracts/SemanticContracts.csproj" />
+  </ItemGroup>
+</Project>
