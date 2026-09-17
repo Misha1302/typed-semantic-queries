@@ -4,7 +4,7 @@ using SemanticQueries.Core;
 namespace Packages.BoundsBridge;
 
 public sealed class BoundsBridgeProvider
-    : IQueryProvider<InBoundsQuery, InBoundsKey, Proof>
+    : IQueryProvider<InBoundsQuery, InBoundsKey, Proof>, IStableQueryProvider
 {
     private static readonly RangeQuery Range = new();
     private static readonly LengthQuery Length = new();
