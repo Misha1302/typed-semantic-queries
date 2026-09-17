@@ -1,4 +1,8 @@
 using MiniCompiler.IR;
+using Packages.ArraySemantics;
+using Packages.BasicRange;
+using Packages.BoundsBridge;
+using SemanticContracts;
 using SemanticQueries.Core;
 
 var unit = new CompilationUnit();
@@ -44,6 +48,27 @@ var countingSession = Session(unit, new StaticPlan().Add(counting));
 _ = countingSession.Query(new RevisionQuery(), "memo");
 _ = countingSession.Query(new RevisionQuery(), "memo");
 AssertEqual(1, counting.Calls, "stable provider memoization");
+
+// A representative built-in plan must not globally disable memoization just because
+// it contains stateless bridges or providers whose only mutable source is the IR revision.
+var builtInValue = new ValueId("memo-i");
+var builtInArray = new ArrayId("memo-a");
+var builtInPoint = new ProgramPoint("memo-body");
+var builtInUnit = new CompilationUnit().Constant(builtInValue, 2).Array(builtInArray, 4);
+var builtInRange = new BasicRangeProvider(builtInUnit);
+var builtInPlan = new StaticPlan()
+    .Add(builtInRange)
+    .Add(new ArrayLengthProvider(builtInUnit))
+    .Add(new BoundsBridgeProvider());
+var builtInSession = Session(builtInUnit, builtInPlan);
+for (var iteration = 0; iteration < 20; iteration++)
+{
+    var proof = builtInSession.Query(
+        new InBoundsQuery(),
+        new InBoundsKey(builtInArray, builtInValue, builtInPoint));
+    AssertEqual(QueryStatus.Known, proof.Status, "representative built-in bounds proof");
+}
+AssertEqual(1, builtInRange.Calls, "representative built-in plan memoization");
 
 Console.WriteLine("SEMANTIC_ARCHITECTURE_ACCEPTANCE_PASS");
 return;
