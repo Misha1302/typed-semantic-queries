@@ -13,7 +13,7 @@ consumer -> Query<TKey,TValue> -> SemanticSession -> StaticPlan -> provider(s)
 
 `SemanticSession` owns dispatch, revision checks, memoization and cycle detection. `StaticPlan` owns the already-composed provider list. It does not discover plugins, scan assemblies, run a fixed-point solver, or track a dependency DAG.
 
-Provider lookup is keyed by the **query contract type**, not merely by key/value types. This matters: two independent queries can both be `string -> int` without seeing each other's providers. `QueryTypesWithSameKeyAndValue_DoNotShareProviders` is the regression test for that boundary.
+Provider registration and lookup are keyed by the **CLR query contract type**, not merely by key/value types and not by `QueryIdentity.Variant`. This matters in two directions: two independent queries can both be `string -> int` without seeing each other's providers, while two variants of the same query contract deliberately use the same registered provider set. `QueryIdentity.Variant` only refines the query/combine/cache/cycle identity. Variant values therefore need stable equality and must not be mutated after they have been used as identity. `QueryTypesWithSameKeyAndValue_DoNotShareProviders` and the architecture-acceptance variant regression lock both sides of this boundary.
 
 The session is single-threaded in this MVP. Nothing in the runtime claims provider purity: arbitrary C# providers can still read clocks, globals or mutable state. Determinism therefore depends on the provider contract and tests, not on an automatic purity proof.
 
@@ -32,7 +32,7 @@ This keeps legality knowledge separate from heuristic knowledge: `P(condition)=0
 
 Every IR mutation increments `CompilationUnit.Revision`. `StaticPlan` also carries a composition revision, and providers with mutable analysis-owned state expose `ISemanticRevisionSource`. A session snapshots all of those revisions. Every query checks them before dispatch; changing IR, provider composition, or tracked provider state makes the old session throw `StaleSemanticSessionException`.
 
-Legacy providers without an explicit stability or revision contract remain source-compatible but make the plan cache-unsafe, so the session does not memoize their results. Providers that are immutable for a session can opt into memoization with `IStableQueryProvider`. The model is intentionally coarse: there is no cross-revision cache reuse and no automatic transfer through rewrites.
+Legacy providers without an explicit stability or revision contract remain source-compatible but make the plan cache-unsafe, so the session does not memoize their results. Providers with no independently mutable semantic state can opt into memoization with `IStableQueryProvider`. IR-backed providers such as array length, loop range, profile, no-alias and alignment are stable in this sense because their mutable source is already guarded by the session's `CompilationUnit.Revision`; stateless bridges are stable because their answers are functions of nested typed queries whose own lifecycle is checked. A provider that owns mutable analysis state must instead expose `ISemanticRevisionSource` (as `LoopEffectsProvider` does). Unknown legacy providers remain conservatively cache-unsafe for the entire plan. The model is intentionally coarse: there is no cross-revision cache reuse and no automatic transfer through rewrites.
 
 ## Engines stay engines
 
