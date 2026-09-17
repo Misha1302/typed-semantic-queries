@@ -5,7 +5,7 @@ using SemanticQueries.Core;
 namespace Packages.ArraySemantics;
 
 public sealed class ArrayLengthProvider(CompilationUnit unit)
-    : IQueryProvider<LengthQuery, LengthKey, int>
+    : IQueryProvider<LengthQuery, LengthKey, int>, IStableQueryProvider
 {
     public QueryResult<int> TryGet(LengthKey key, QueryContext context) =>
         unit.TryGetArrayLength(key.Array, out var length)
