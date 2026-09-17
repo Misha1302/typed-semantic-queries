@@ -11,11 +11,15 @@ AssertEqual(1, legacySession.Query(new LegacyQuery(), "x").Value, "legacy first 
 legacyProvider.Set(2);
 AssertEqual(2, legacySession.Query(new LegacyQuery(), "x").Value, "untracked mutable provider must not serve stale cache");
 
-// Stateful query variants of one CLR type must not collide in cache identity.
-var variantPlan = new StaticPlan().Add(new VariantProvider());
+// Variants share one CLR-contract provider set but have distinct cache/cycle identities.
+var variantProvider = new VariantProvider();
+var variantPlan = new StaticPlan().Add(variantProvider);
 var variantSession = Session(unit, variantPlan);
 AssertEqual(11, variantSession.Query(new VariantQuery(1), "x").Value, "variant +1");
+AssertEqual(11, variantSession.Query(new VariantQuery(1), "x").Value, "variant +1 cached");
 AssertEqual(110, variantSession.Query(new VariantQuery(100), "x").Value, "variant +100");
+AssertEqual(110, variantSession.Query(new VariantQuery(100), "x").Value, "variant +100 cached");
+AssertEqual(2, variantProvider.Calls, "two variants must share provider registration but not cache identity");
 
 // Plan mutation after session creation invalidates cached results and provider topology.
 var mutablePlan = new StaticPlan();
@@ -93,7 +97,13 @@ sealed class VariantQuery(int offset) : IQuerySpec<string, int>
 
 sealed class VariantProvider : IQueryProvider<VariantQuery, string, int>, IStableQueryProvider
 {
-    public QueryResult<int> TryGet(string key, QueryContext context) => QueryResult<int>.Known(10);
+    public int Calls { get; private set; }
+
+    public QueryResult<int> TryGet(string key, QueryContext context)
+    {
+        Calls++;
+        return QueryResult<int>.Known(10);
+    }
 }
 
 sealed class RevisionQuery : IQuerySpec<string, int>
