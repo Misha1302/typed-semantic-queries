@@ -13,7 +13,7 @@ consumer -> Query<TKey,TValue> -> SemanticSession -> StaticPlan -> provider(s)
 
 `SemanticSession` owns dispatch, revision checks, memoization and cycle detection. `StaticPlan` owns the already-composed provider list. It does not discover plugins, scan assemblies, run a fixed-point solver, or track a dependency DAG.
 
-Provider lookup is keyed by the **query contract type**, not merely by key/value types. This matters: two independent queries can both be `string -> int` without seeing each other's providers. `QueryTypesWithSameKeyAndValue_DoNotShareProviders` is the regression test for that boundary.
+Provider registration and lookup are keyed by the **CLR query contract type**, not merely by key/value types and not by `QueryIdentity.Variant`. This matters in two directions: two independent queries can both be `string -> int` without seeing each other's providers, while two variants of the same query contract deliberately use the same registered provider set. `QueryIdentity.Variant` only refines the query/combine/cache/cycle identity. Variant values therefore need stable equality and must not be mutated after they have been used as identity. `QueryTypesWithSameKeyAndValue_DoNotShareProviders` and the architecture-acceptance variant regression lock both sides of this boundary.
 
 The session is single-threaded in this MVP. Nothing in the runtime claims provider purity: arbitrary C# providers can still read clocks, globals or mutable state. Determinism therefore depends on the provider contract and tests, not on an automatic purity proof.
 
@@ -28,11 +28,28 @@ The session is single-threaded in this MVP. Nothing in the runtime claims provid
 
 This keeps legality knowledge separate from heuristic knowledge: `P(condition)=0.999999` may affect layout, but cannot remove a bounds check.
 
+### Composition contract
+
+The host owns provider selection when it constructs `StaticPlan`; registration order is never a selection mechanism. All entries below are session-scoped: plan mutation, IR revision change, or a tracked provider revision change invalidates an existing session. There is no runtime package-version negotiation in this MVP: a provider must be compiled against the compatible public CLR query contract/type, and the host owns package/version compatibility at composition time.
+
+| Query | Provider cardinality | Merge / conflict semantics | Ordering | Failure without usable knowledge |
+|---|---|---|---|---|
+| `RangeQuery` | zero..many | intersect all known ranges; disjoint claims => `Conflict` | irrelevant; intersection is order-independent | `Unknown` |
+| `LengthQuery` | zero..many | all known values must agree; disagreement => `Conflict` | irrelevant | `Unknown` |
+| `InBoundsQuery` | zero..many | any positive proof is sufficient; provider `Conflict` still dominates | irrelevant | `Unknown` / fail closed |
+| `BranchProbabilityQuery` | zero..one semantically | one known value; more than one known provider => `Conflict` even if equal | irrelevant; no registration winner | `Unknown` |
+| `EffectsQuery` | zero..one semantically | one known effect set; more than one known provider => `Conflict` | irrelevant; no registration winner | `Unknown` |
+| `NoAliasQuery` | zero..many | any positive proof is sufficient; provider `Conflict` dominates | irrelevant | `Unknown` / fail closed |
+| `CanHoistQuery` | zero..many | any positive proof is sufficient; provider `Conflict` dominates | irrelevant | `Unknown` / fail closed |
+| `AlignmentQuery` | zero..many | all known alignments must agree; disagreement => `Conflict` | irrelevant | `Unknown` |
+
+A query contract owns validation and merge/conflict semantics; `SemanticSession` owns dispatch, conflict propagation, lifecycle checks, memoization and cycle detection; the host owns which provider implementations and compatible package versions enter the plan. If an extension needs selection semantics that are not expressible by these query-owned rules, it requires a new typed contract or an explicit host policy rather than reliance on DI/reflection/filesystem/dictionary order.
+
 ## Revision model
 
 Every IR mutation increments `CompilationUnit.Revision`. `StaticPlan` also carries a composition revision, and providers with mutable analysis-owned state expose `ISemanticRevisionSource`. A session snapshots all of those revisions. Every query checks them before dispatch; changing IR, provider composition, or tracked provider state makes the old session throw `StaleSemanticSessionException`.
 
-Legacy providers without an explicit stability or revision contract remain source-compatible but make the plan cache-unsafe, so the session does not memoize their results. Providers that are immutable for a session can opt into memoization with `IStableQueryProvider`. The model is intentionally coarse: there is no cross-revision cache reuse and no automatic transfer through rewrites.
+Legacy providers without an explicit stability or revision contract remain source-compatible but make the plan cache-unsafe, so the session does not memoize their results. Providers with no independently mutable semantic state can opt into memoization with `IStableQueryProvider`. IR-backed providers such as array length, loop range, profile, no-alias and alignment are stable in this sense because their mutable source is already guarded by the session's `CompilationUnit.Revision`; stateless bridges are stable because their answers are functions of nested typed queries whose own lifecycle is checked. A provider that owns mutable analysis state must instead expose `ISemanticRevisionSource` (as `LoopEffectsProvider` does). Unknown legacy providers remain conservatively cache-unsafe for the entire plan. The model is intentionally coarse: there is no cross-revision cache reuse and no automatic transfer through rewrites.
 
 ## Engines stay engines
 

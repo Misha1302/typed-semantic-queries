@@ -19,7 +19,7 @@ public sealed class LoopAnalysisEngine(CompilationUnit unit)
     }
 }
 
-public sealed class LoopRangeProvider : IQueryProvider<RangeQuery, RangeKey, AbstractRange>
+public sealed class LoopRangeProvider : IQueryProvider<RangeQuery, RangeKey, AbstractRange>, IStableQueryProvider
 {
     private readonly LoopAnalysisEngine _engine;
 

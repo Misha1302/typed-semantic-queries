@@ -4,7 +4,7 @@ using SemanticQueries.Core;
 namespace Packages.LicmBridge;
 
 public sealed class CanHoistBridgeProvider
-    : IQueryProvider<CanHoistQuery, CanHoistKey, Proof>
+    : IQueryProvider<CanHoistQuery, CanHoistKey, Proof>, IStableQueryProvider
 {
     private static readonly EffectsQuery Effects = new();
     private static readonly NoAliasQuery NoAlias = new();

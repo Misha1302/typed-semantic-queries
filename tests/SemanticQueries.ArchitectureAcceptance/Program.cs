@@ -1,4 +1,8 @@
 using MiniCompiler.IR;
+using Packages.ArraySemantics;
+using Packages.BasicRange;
+using Packages.BoundsBridge;
+using SemanticContracts;
 using SemanticQueries.Core;
 
 var unit = new CompilationUnit();
@@ -11,11 +15,15 @@ AssertEqual(1, legacySession.Query(new LegacyQuery(), "x").Value, "legacy first 
 legacyProvider.Set(2);
 AssertEqual(2, legacySession.Query(new LegacyQuery(), "x").Value, "untracked mutable provider must not serve stale cache");
 
-// Stateful query variants of one CLR type must not collide in cache identity.
-var variantPlan = new StaticPlan().Add(new VariantProvider());
+// Variants share one CLR-contract provider set but have distinct cache/cycle identities.
+var variantProvider = new VariantProvider();
+var variantPlan = new StaticPlan().Add(variantProvider);
 var variantSession = Session(unit, variantPlan);
 AssertEqual(11, variantSession.Query(new VariantQuery(1), "x").Value, "variant +1");
+AssertEqual(11, variantSession.Query(new VariantQuery(1), "x").Value, "variant +1 cached");
 AssertEqual(110, variantSession.Query(new VariantQuery(100), "x").Value, "variant +100");
+AssertEqual(110, variantSession.Query(new VariantQuery(100), "x").Value, "variant +100 cached");
+AssertEqual(2, variantProvider.Calls, "two variants must share provider registration but not cache identity");
 
 // Plan mutation after session creation invalidates cached results and provider topology.
 var mutablePlan = new StaticPlan();
@@ -40,6 +48,27 @@ var countingSession = Session(unit, new StaticPlan().Add(counting));
 _ = countingSession.Query(new RevisionQuery(), "memo");
 _ = countingSession.Query(new RevisionQuery(), "memo");
 AssertEqual(1, counting.Calls, "stable provider memoization");
+
+// A representative built-in plan must not globally disable memoization just because
+// it contains stateless bridges or providers whose only mutable source is the IR revision.
+var builtInValue = new ValueId("memo-i");
+var builtInArray = new ArrayId("memo-a");
+var builtInPoint = new ProgramPoint("memo-body");
+var builtInUnit = new CompilationUnit().Constant(builtInValue, 2).Array(builtInArray, 4);
+var builtInRange = new BasicRangeProvider(builtInUnit);
+var builtInPlan = new StaticPlan()
+    .Add(builtInRange)
+    .Add(new ArrayLengthProvider(builtInUnit))
+    .Add(new BoundsBridgeProvider());
+var builtInSession = Session(builtInUnit, builtInPlan);
+for (var iteration = 0; iteration < 20; iteration++)
+{
+    var proof = builtInSession.Query(
+        new InBoundsQuery(),
+        new InBoundsKey(builtInArray, builtInValue, builtInPoint));
+    AssertEqual(QueryStatus.Known, proof.Status, "representative built-in bounds proof");
+}
+AssertEqual(1, builtInRange.Calls, "representative built-in plan memoization");
 
 Console.WriteLine("SEMANTIC_ARCHITECTURE_ACCEPTANCE_PASS");
 return;
@@ -93,7 +122,13 @@ sealed class VariantQuery(int offset) : IQuerySpec<string, int>
 
 sealed class VariantProvider : IQueryProvider<VariantQuery, string, int>, IStableQueryProvider
 {
-    public QueryResult<int> TryGet(string key, QueryContext context) => QueryResult<int>.Known(10);
+    public int Calls { get; private set; }
+
+    public QueryResult<int> TryGet(string key, QueryContext context)
+    {
+        Calls++;
+        return QueryResult<int>.Known(10);
+    }
 }
 
 sealed class RevisionQuery : IQuerySpec<string, int>

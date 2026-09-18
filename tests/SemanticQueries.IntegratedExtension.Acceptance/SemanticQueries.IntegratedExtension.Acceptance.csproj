@@ -9,8 +9,8 @@
     <ProjectReference Include="../../src/SemanticQueries.Core/SemanticQueries.Core.csproj" />
     <ProjectReference Include="../../src/MiniCompiler.IR/MiniCompiler.IR.csproj" />
     <ProjectReference Include="../../src/SemanticContracts/SemanticContracts.csproj" />
-    <ProjectReference Include="../../src/Packages.BasicRange/Packages.BasicRange.csproj" />
     <ProjectReference Include="../../src/Packages.ArraySemantics/Packages.ArraySemantics.csproj" />
     <ProjectReference Include="../../src/Packages.BoundsBridge/Packages.BoundsBridge.csproj" />
+    <ProjectReference Include="../../src/Packages.BoundsOptimizer/Packages.BoundsOptimizer.csproj" />
   </ItemGroup>
 </Project>
