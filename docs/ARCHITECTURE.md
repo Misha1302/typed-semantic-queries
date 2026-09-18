@@ -28,6 +28,23 @@ The session is single-threaded in this MVP. Nothing in the runtime claims provid
 
 This keeps legality knowledge separate from heuristic knowledge: `P(condition)=0.999999` may affect layout, but cannot remove a bounds check.
 
+### Composition contract
+
+The host owns provider selection when it constructs `StaticPlan`; registration order is never a selection mechanism. All entries below are session-scoped: plan mutation, IR revision change, or a tracked provider revision change invalidates an existing session. There is no runtime package-version negotiation in this MVP: a provider must be compiled against the compatible public CLR query contract/type, and the host owns package/version compatibility at composition time.
+
+| Query | Provider cardinality | Merge / conflict semantics | Ordering | Failure without usable knowledge |
+|---|---|---|---|---|
+| `RangeQuery` | zero..many | intersect all known ranges; disjoint claims => `Conflict` | irrelevant; intersection is order-independent | `Unknown` |
+| `LengthQuery` | zero..many | all known values must agree; disagreement => `Conflict` | irrelevant | `Unknown` |
+| `InBoundsQuery` | zero..many | any positive proof is sufficient; provider `Conflict` still dominates | irrelevant | `Unknown` / fail closed |
+| `BranchProbabilityQuery` | zero..one semantically | one known value; more than one known provider => `Conflict` even if equal | irrelevant; no registration winner | `Unknown` |
+| `EffectsQuery` | zero..one semantically | one known effect set; more than one known provider => `Conflict` | irrelevant; no registration winner | `Unknown` |
+| `NoAliasQuery` | zero..many | any positive proof is sufficient; provider `Conflict` dominates | irrelevant | `Unknown` / fail closed |
+| `CanHoistQuery` | zero..many | any positive proof is sufficient; provider `Conflict` dominates | irrelevant | `Unknown` / fail closed |
+| `AlignmentQuery` | zero..many | all known alignments must agree; disagreement => `Conflict` | irrelevant | `Unknown` |
+
+A query contract owns validation and merge/conflict semantics; `SemanticSession` owns dispatch, conflict propagation, lifecycle checks, memoization and cycle detection; the host owns which provider implementations and compatible package versions enter the plan. If an extension needs selection semantics that are not expressible by these query-owned rules, it requires a new typed contract or an explicit host policy rather than reliance on DI/reflection/filesystem/dictionary order.
+
 ## Revision model
 
 Every IR mutation increments `CompilationUnit.Revision`. `StaticPlan` also carries a composition revision, and providers with mutable analysis-owned state expose `ISemanticRevisionSource`. A session snapshots all of those revisions. Every query checks them before dispatch; changing IR, provider composition, or tracked provider state makes the old session throw `StaleSemanticSessionException`.
